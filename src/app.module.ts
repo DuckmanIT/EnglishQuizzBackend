@@ -7,6 +7,7 @@ import { DecksModule } from './decks/decks.module.js';
 import { validateEnv, type Env } from './config/env.js';
 import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { RootController } from './root.controller.js';
 import { StatsModule } from './stats/stats.module.js';
 import { StudyModule } from './study/study.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -39,6 +40,6 @@ import { UsersModule } from './users/users.module.js';
     StudyModule,
     StatsModule,
   ],
-  controllers: [HealthController],
+  controllers: [RootController, HealthController],
 })
 export class AppModule {}

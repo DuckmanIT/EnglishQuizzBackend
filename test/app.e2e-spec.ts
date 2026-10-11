@@ -37,6 +37,16 @@ describe('App (e2e)', () => {
       });
   });
 
+  it('GET / (the bare domain) answers with pointers to the docs', async () => {
+    const res = await request(t.app.getHttpServer()).get('/').expect(200);
+    expect(res.body).toEqual({
+      name: 'EnglishQuizz API',
+      docs: '/docs',
+      openapi: '/docs-json',
+      health: '/api/v1/health',
+    });
+  });
+
   it('unknown routes use the standard error shape', async () => {
     const res = await request(t.app.getHttpServer())
       .get('/api/v1/nope')

@@ -1,4 +1,8 @@
-import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import {
+  RequestMethod,
+  ValidationPipe,
+  type INestApplication,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -19,7 +23,10 @@ export function setupApp(app: INestApplication): void {
   // Card imports send up to 1M characters (~3MB of UTF-8 for Vietnamese); the default is 100kb.
   expressApp.useBodyParser('json', { limit: '4mb' });
 
-  app.setGlobalPrefix(API_PREFIX);
+  // GET / stays at the root so the bare domain answers with pointers to the docs.
+  app.setGlobalPrefix(API_PREFIX, {
+    exclude: [{ path: '/', method: RequestMethod.GET }],
+  });
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
