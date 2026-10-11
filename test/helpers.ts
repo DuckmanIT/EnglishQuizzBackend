@@ -1,5 +1,6 @@
 import { UnauthorizedException, type INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import {
@@ -62,6 +63,18 @@ export async function createTestApp(): Promise<TestApp> {
   setupApp(app);
   await app.init();
   return { app, prisma: app.get(PrismaService) };
+}
+
+/** Signs in through the real /auth/google flow and returns an Authorization header value. */
+export async function loginAs(
+  t: TestApp,
+  profile: Partial<GoogleProfile> = {},
+): Promise<{ userId: string; auth: string }> {
+  const res = await request(t.app.getHttpServer())
+    .post('/api/v1/auth/google')
+    .send({ idToken: fakeGoogleToken(profile) })
+    .expect(200);
+  return { userId: res.body.user.id, auth: `Bearer ${res.body.accessToken}` };
 }
 
 /** Empties every table (except Prisma's migration log) between tests. */

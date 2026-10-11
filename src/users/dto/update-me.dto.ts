@@ -14,8 +14,7 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
-
-const LANG_CODE = /^[a-z]{2,3}$/;
+import { LANG_CODE } from '../../common/validation.js';
 
 @ValidatorConstraint({ name: 'isTimeZone' })
 class IsTimeZone implements ValidatorConstraintInterface {
