@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { AuthModule } from './auth/auth.module.js';
+import { CardsModule } from './cards/cards.module.js';
+import { DecksModule } from './decks/decks.module.js';
 import { validateEnv, type Env } from './config/env.js';
 import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -30,6 +32,8 @@ import { UsersModule } from './users/users.module.js';
     PrismaModule,
     AuthModule,
     UsersModule,
+    DecksModule,
+    CardsModule,
   ],
   controllers: [HealthController],
 })

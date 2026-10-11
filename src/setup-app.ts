@@ -13,8 +13,11 @@ export const API_PREFIX = 'api/v1';
 export function setupApp(app: INestApplication): void {
   const config = app.get(ConfigService<Env, true>);
 
+  const expressApp = app as NestExpressApplication;
   // Behind the hosting platform's proxy: trust X-Forwarded-* for the real client IP.
-  (app as NestExpressApplication).set('trust proxy', 1);
+  expressApp.set('trust proxy', 1);
+  // Card imports send up to 1M characters (~3MB of UTF-8 for Vietnamese); the default is 100kb.
+  expressApp.useBodyParser('json', { limit: '4mb' });
 
   app.setGlobalPrefix(API_PREFIX);
   app.use(helmet());
