@@ -37,7 +37,7 @@ npm run start:dev           # http://localhost:4000
 | `npm run build` / `npm run start:prod` | Build và chạy bản production |
 | `npm run lint` / `npm run typecheck` | oxlint / tsc |
 | `npm test` | Unit test (`src/**/*.spec.ts`) |
-| `npm run test:e2e` | E2E test (`test/**/*.e2e-spec.ts`, Prisma được mock — không cần DB) |
+| `npm run test:e2e` | E2E test (`test/**/*.e2e-spec.ts`) trên DB riêng `englishquizz_test` — cần `docker compose up -d` |
 | `npm run db:migrate` | `prisma migrate dev` (dùng `DIRECT_URL`) |
 | `npm run db:deploy` | Áp dụng migration ở production |
 | `npm run db:studio` | Prisma Studio |

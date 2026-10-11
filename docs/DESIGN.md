@@ -303,6 +303,13 @@ model UsageCounter {           // đếm quota AI theo ngày/tháng
 
 Access token JWT sống 15 phút; refresh token sống 30 ngày, lưu dạng hash, xoay vòng mỗi lần dùng.
 
+**Chi tiết đã hiện thực** (`src/auth/`):
+- Refresh token nằm trong cookie `eq_refresh` (`HttpOnly; SameSite=Lax; Path=/`, `Secure` ở production, `Domain` = `COOKIE_DOMAIN`). Body của `/auth/google` và `/auth/refresh` chỉ trả access token.
+- Đăng nhập Google: xác minh `idToken` với `GOOGLE_CLIENT_ID`, bắt buộc email đã verify. Gặp lại cùng `sub` → đăng nhập; email đã tồn tại → liên kết identity mới vào user đó; còn lại → tạo user + subscription FREE.
+- Rotation: mỗi lần refresh, token cũ bị thu hồi. Dùng lại token đã thu hồi **trong vòng 30 giây** (hai tab refresh cùng lúc) → chỉ trả 401; **sau 30 giây** → coi là bị đánh cắp, thu hồi mọi phiên của user.
+- Mọi route mặc định cần đăng nhập (guard toàn cục); route công khai đánh dấu `@Public()`.
+- Mã lỗi cho frontend: `AUTH_MISSING_TOKEN`, `AUTH_INVALID_TOKEN` (→ gọi `/auth/refresh` rồi thử lại 1 lần), `AUTH_INVALID_REFRESH_TOKEN` (→ về màn đăng nhập), `AUTH_USER_NOT_FOUND`, `AUTH_INVALID_GOOGLE_TOKEN`, `AUTH_EMAIL_NOT_VERIFIED`, `AUTH_GOOGLE_NOT_CONFIGURED`.
+
 ### User
 | Method | Path | Mô tả |
 |---|---|---|
@@ -431,6 +438,8 @@ Hai môi trường, tách biệt hoàn toàn:
 | Redis | `docker compose` | Upstash |
 | Biến môi trường | File `.env` (copy từ `.env.example`, gitignored) | Đặt trên dashboard của nền tảng hosting; `PRODUCTION_DIRECT_URL`, `DEPLOY_HOOK_URL` đặt trong GitHub Environment `production` |
 | `NODE_ENV` | `development` (log dạng pretty) | `production` (log JSON) |
+
+E2E test dùng database riêng thứ ba, `englishquizz_test` (cùng container Postgres ở máy; container Postgres tạm trong CI). Test tự tạo và migrate DB này, và từ chối chạy nếu tên DB không kết thúc bằng `_test`.
 
 **Luồng code → production** (`.github/workflows/ci.yml`):
 

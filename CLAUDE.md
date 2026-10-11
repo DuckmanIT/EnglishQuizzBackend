@@ -17,7 +17,7 @@ npm run lint && npm run typecheck
 npm test                                   # unit tests: src/**/*.spec.ts
 npx vitest run src/path/to/file.spec.ts    # single file
 npx vitest run -t "test name"              # single test
-npm run test:e2e                           # test/**/*.e2e-spec.ts, PrismaService mocked, no DB needed
+npm run test:e2e                           # test/**/*.e2e-spec.ts, real Postgres DB englishquizz_test (needs docker compose up)
 docker compose up -d                       # Postgres + Redis for local dev
 npm run db:migrate                         # prisma migrate dev
 ```
@@ -29,6 +29,8 @@ npm run db:migrate                         # prisma migrate dev
 - **Env:** every variable is declared and validated in `src/config/env.ts` (zod). Read config through `ConfigService<Env, true>` with `{ infer: true }`, not `process.env`.
 - **HTTP pipeline** lives in `src/setup-app.ts` (prefix `/api/v1`, CORS, cookies, helmet, ValidationPipe, Swagger, error filter) and is shared by `main.ts` and e2e tests.
 - **Errors:** all responses use `{ statusCode, code, message }`. For a domain error, throw `new HttpException({ code: 'DECK_NOT_FOUND', message }, 404)`; the frontend branches on `code`.
+- **Auth:** a global `JwtAuthGuard` protects every route. Mark public routes with `@Public()` and get the caller with `@CurrentUser() user: AuthUser` (both in `src/auth/auth-user.ts`). The refresh token only travels in the `eq_refresh` cookie, handled by `RefreshCookie`.
+- **E2E tests** run against a dedicated database, `englishquizz_test`, which `test/global-setup.ts` creates and migrates. Use `createTestApp()` and `resetDatabase()` from `test/helpers.ts`. Google is faked through `GoogleTokenVerifier`, so `fakeGoogleToken({...})` stands in for an ID token. Never point tests at the dev DB.
 - **Modules:** one folder per domain under `src/` (auth, decks, cards, study, …) as listed in DESIGN.md. Ownership checks live in services, not controllers.
 - **Phases:** build MVP features first (auth, decks/cards, catalog, SRS, study modes, stats). Do not build Phase 2/3 features unless asked.
 - **Environments:** localhost (`.env` + docker compose) and production (env vars on the hosting platform). Production deploys only from `main` via `.github/workflows/ci.yml`, after lint, typecheck, unit, e2e, build and docker build all pass. Never point local tooling at the production DB. Migrations run before the new code goes live, so keep them backward compatible.

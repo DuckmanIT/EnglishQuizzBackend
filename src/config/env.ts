@@ -18,6 +18,17 @@ const envSchema = z.object({
         .filter(Boolean),
     ),
   DATABASE_URL: z.url(),
+
+  JWT_ACCESS_SECRET: z.string().min(32, 'must be at least 32 characters'),
+  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  // Unset on localhost; ".duckman.io.vn" in production so both api. and the Next.js server see the cookie.
+  COOKIE_DOMAIN: z
+    .string()
+    .optional()
+    .transform((value) => value || undefined),
+  // Optional so the app boots without it; POST /auth/google answers 503 until it is set.
+  GOOGLE_CLIENT_ID: z.string().default(''),
 });
 
 export type Env = z.infer<typeof envSchema>;
