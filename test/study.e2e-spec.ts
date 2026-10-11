@@ -345,8 +345,9 @@ describe('Study (e2e)', () => {
       expect(res.body.questions.map((q: Question) => q.prompt.text)).toEqual(
         WORDS,
       );
-      expect([...res.body.matchChoices].sort()).toEqual(
-        WORDS.map((w) => `${w} (vi)`).sort(),
+      expect(res.body.matchChoices).toHaveLength(WORDS.length);
+      expect(res.body.matchChoices).toEqual(
+        expect.arrayContaining(WORDS.map((w) => `${w} (vi)`)),
       );
     });
 

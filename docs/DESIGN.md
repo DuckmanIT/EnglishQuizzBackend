@@ -374,6 +374,11 @@ Access token JWT sống 15 phút; refresh token sống 30 ngày, lưu dạng has
 | GET | `/stats/heatmap?from=&to=` | Số lượt ôn theo ngày |
 | GET | `/stats/forecast` | Dự báo số thẻ đến hạn 30 ngày tới |
 
+**Chi tiết đã hiện thực** (`src/stats/`): mọi "ngày" là ngày theo `timezone` trong hồ sơ user; Postgres đổi giờ UTC sang giờ địa phương khi gộp (`AT TIME ZONE`).
+- `overview`: `studiedCards`, `learningCards`, `matureCards` (đang ôn, khoảng ôn ≥ 21 ngày — "đã thuộc"), `dueCards`, `totalReviews`, `reviewsToday`, `accuracy30d` (tỉ lệ đúng 30 ngày, `null` nếu chưa ôn), `currentStreak` (chuỗi ngày học liên tiếp tính đến hôm nay, vẫn giữ nếu hôm qua có học), `longestStreak`, `studiedToday`.
+- `heatmap?from=&to=` (YYYY-MM-DD, mặc định 365 ngày đến hôm nay, tối đa 400 ngày, sai → 400 `STATS_INVALID_RANGE`): chỉ trả các ngày có lượt ôn.
+- `forecast?days=` (1–365, mặc định 30): mỗi ngày một phần tử từ hôm nay; thẻ quá hạn cộng vào hôm nay; bỏ qua thẻ thuộc deck riêng tư của người khác.
+
 ### AI (Premium)
 | Method | Path | Mô tả |
 |---|---|---|
