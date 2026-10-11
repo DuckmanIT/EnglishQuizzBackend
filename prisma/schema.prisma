@@ -1,0 +1,334 @@
+// Data model — see docs/DESIGN.md §3.
+// Connection URLs live in prisma.config.ts (migrations) and PrismaService (runtime).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+  EMAIL
+}
+
+enum DeckSource {
+  USER
+  SYSTEM
+  AI
+}
+
+enum Visibility {
+  PRIVATE
+  UNLISTED
+  PUBLIC
+}
+
+enum StudyMode {
+  FLIP
+  MULTIPLE_CHOICE
+  DICTATION
+  MATCH
+  TYPE_ANSWER
+}
+
+enum CardState {
+  NEW
+  LEARNING
+  REVIEW
+  RELEARNING
+}
+
+enum Rating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+enum AiJobType {
+  IMAGE_TO_CARDS
+  TEXT_TO_CARDS
+  PATH
+}
+
+enum AiJobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  email         String   @unique
+  displayName   String?
+  avatarUrl     String?
+  nativeLang    String   @default("vi") // ISO 639-1
+  targetLangs   String[]
+  role          Role     @default(USER)
+  timezone      String   @default("Asia/Ho_Chi_Minh")
+  dailyNewLimit Int      @default(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  identities    Identity[]
+  refreshTokens RefreshToken[]
+  subscription  Subscription?
+  decks         Deck[]
+  cardProgress  CardProgress[]
+  reviewLogs    ReviewLog[]
+  paths         LearningPath[]
+  enrollments   UserPathEnrollment[]
+  aiJobs        AiJob[]
+  conversations Conversation[]
+  usageCounters UsageCounter[]
+}
+
+model Identity {
+  id         String       @id @default(uuid()) @db.Uuid
+  userId     String       @db.Uuid
+  provider   AuthProvider
+  providerId String // "sub" claim from Google/Apple
+  createdAt  DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Deck {
+  id          String     @id @default(uuid()) @db.Uuid
+  ownerId     String?    @db.Uuid // null for system decks
+  title       String
+  description String?
+  frontLang   String
+  backLang    String
+  source      DeckSource @default(USER)
+  visibility  Visibility @default(PRIVATE)
+  coverUrl    String?
+  cardCount   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  owner     User?      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  cards     Card[]
+  pathItems PathItem[]
+
+  @@index([ownerId])
+  @@index([visibility, frontLang])
+}
+
+model Card {
+  id           String   @id @default(uuid()) @db.Uuid
+  deckId       String   @db.Uuid
+  term         String
+  definition   String
+  phonetic     String? // IPA / pinyin / romaji
+  partOfSpeech String?
+  example      String?
+  exampleTrans String?
+  imageUrl     String?
+  audioUrl     String?
+  position     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  deck       Deck           @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  progress   CardProgress[]
+  reviewLogs ReviewLog[]
+
+  @@index([deckId, position])
+}
+
+// Per-user FSRS state for one card.
+model CardProgress {
+  userId     String    @db.Uuid
+  cardId     String    @db.Uuid
+  state      CardState @default(NEW)
+  due        DateTime  @default(now())
+  stability  Float     @default(0)
+  difficulty Float     @default(0)
+  reps       Int       @default(0)
+  lapses     Int       @default(0)
+  lastReview DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@id([userId, cardId])
+  @@index([userId, due])
+}
+
+model ReviewLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  cardId     String    @db.Uuid
+  mode       StudyMode
+  rating     Rating
+  correct    Boolean
+  answer     String? // what the user typed (dictation / type-answer)
+  durationMs Int?
+  reviewedAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, reviewedAt])
+  @@index([cardId])
+}
+
+model LearningPath {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  title       String
+  description String?
+  language    String
+  level       String? // "B2", "N3", "HSK4"…
+  isSystem    Boolean  @default(true)
+  ownerId     String?  @db.Uuid // set for AI-personalized paths
+  createdAt   DateTime @default(now())
+
+  owner       User?                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  items       PathItem[]
+  enrollments UserPathEnrollment[]
+
+  @@index([language, level])
+}
+
+model PathItem {
+  pathId   String @db.Uuid
+  deckId   String @db.Uuid
+  position Int
+
+  path LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  deck Deck         @relation(fields: [deckId], references: [id], onDelete: Cascade)
+
+  @@id([pathId, deckId])
+}
+
+model UserPathEnrollment {
+  userId    String   @db.Uuid
+  pathId    String   @db.Uuid
+  startedAt DateTime @default(now())
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path LearningPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+
+  @@id([userId, pathId])
+}
+
+model Subscription {
+  id               String             @id @default(uuid()) @db.Uuid
+  userId           String             @unique @db.Uuid
+  plan             Plan               @default(FREE)
+  period           BillingPeriod?
+  status           SubscriptionStatus @default(ACTIVE)
+  provider         String? // vnpay | momo | stripe
+  providerRef      String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AiJob {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  type      AiJobType
+  status    AiJobStatus @default(QUEUED)
+  input     Json
+  result    Json?
+  error     String?
+  deckId    String?     @db.Uuid // deck created on accept
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  scenario  String // travel | work | interview | custom
+  language  String
+  level     String?
+  createdAt DateTime @default(now())
+
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@index([userId, createdAt])
+}
+
+model ConversationMessage {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @db.Uuid
+  role           MessageRole
+  content        String
+  corrections    Json?
+  createdAt      DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+// AI quota counters, e.g. key = "ai_cards:2026-10".
+model UsageCounter {
+  userId String @db.Uuid
+  key    String
+  count  Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+}
