@@ -446,8 +446,8 @@ Mọi thứ đặt ở **region Singapore**, gần người dùng Việt Nam; AP
 
 | Thành phần | Dịch vụ | Ghi chú |
 |---|---|---|
-| API NestJS + worker BullMQ | Railway / Render / Fly.io (chọn khi deploy) | Chạy dạng container; API và worker là 2 process từ cùng một image |
-| PostgreSQL | Neon | `DATABASE_URL` đi qua pooler cho app, `DIRECT_URL` kết nối thẳng cho `prisma migrate` |
+| API NestJS (+ worker BullMQ ở pha 2) | **Render**, service `englishquizzbackend` (Docker, Singapore), health check `/api/v1/health`, Auto-Deploy tắt | Deploy chỉ qua deploy hook do CI gọi; Redis/worker chưa dùng ở MVP |
+| PostgreSQL | **Neon**, region `ap-southeast-1` (Singapore), database `neondb` | `DATABASE_URL` (host `-pooler`) trên Render cho app; `PRODUCTION_DIRECT_URL` (kết nối thẳng) trong GitHub Secrets cho `prisma migrate deploy` |
 | Redis | Upstash | Cache, rate limit, hàng đợi BullMQ |
 | Lưu file (ảnh upload, audio TTS) | AWS S3 `ap-southeast-1` (mặc định) | Code chỉ dùng API chuẩn S3 (`@aws-sdk/client-s3`), đổi nhà cung cấp qua `S3_ENDPOINT` mà không sửa code |
 | Frontend Next.js | Vercel | Thuộc repo frontend |
@@ -462,7 +462,7 @@ Hai môi trường, tách biệt hoàn toàn:
 | Frontend | `http://localhost:3000` | `https://duckman.io.vn` |
 | Database | Postgres trong `docker compose` (hoặc 1 branch DB riêng trên Neon) | Neon, Singapore — DB riêng, không bao giờ dùng chung với dev |
 | Redis | `docker compose` | Upstash |
-| Biến môi trường | File `.env` (copy từ `.env.example`, gitignored) | Đặt trên dashboard của nền tảng hosting; `PRODUCTION_DIRECT_URL`, `DEPLOY_HOOK_URL` đặt trong GitHub Environment `production` |
+| Biến môi trường | File `.env` (copy từ `.env.example`, gitignored) | Đặt trên dashboard của nền tảng hosting; `PRODUCTION_DIRECT_URL`, `DEPLOY_HOOK_URL` đặt là GitHub Secrets (hiện ở cấp repo; có thể chuyển vào Environment `production`) |
 | `NODE_ENV` | `development` (log dạng pretty) | `production` (log JSON) |
 
 E2E test dùng database riêng thứ ba, `englishquizz_test` (cùng container Postgres ở máy; container Postgres tạm trong CI). Test tự tạo và migrate DB này, và từ chối chạy nếu tên DB không kết thúc bằng `_test`.
@@ -479,10 +479,11 @@ feature branch ──push/PR──► CI verify: lint · typecheck · unit test 
                          deploy: prisma migrate deploy (DB production) ──► gọi deploy hook của hosting
 ```
 
-- Job deploy chỉ chạy khi repository variable `PRODUCTION_DEPLOY=true` (bật sau khi đã chọn hosting và thêm secret).
+- Job deploy chỉ chạy khi repository variable `PRODUCTION_DEPLOY=true` (đã bật từ 2026-10-11).
 - Chỉ nhánh `main` được deploy; bất kỳ bước nào fail thì dừng, production giữ nguyên bản cũ.
 - Bật branch protection cho `main` trên GitHub: bắt buộc PR + check `verify` pass, cấm push thẳng.
 - Trên nền tảng hosting: tắt auto-deploy khi push (deploy chỉ chạy qua hook từ CI).
+- **Biến môi trường trên Render:** `DATABASE_URL` (pooled), `JWT_ACCESS_SECRET` (ngẫu nhiên ≥ 32 ký tự), `GOOGLE_CLIENT_ID`, `CORS_ORIGINS=https://duckman.io.vn,https://www.duckman.io.vn`, `COOKIE_DOMAIN=.duckman.io.vn`, `LOG_LEVEL=info`. `PORT` do Render cấp; `NODE_ENV=production` có sẵn trong Dockerfile.
 - Migration chạy trước khi deploy code mới, nên migration phải tương thích ngược (thêm cột trước, xoá cột ở release sau).
 
 ### Tên miền
