@@ -35,7 +35,8 @@ jobs:
   deploy:
     name: Deploy to production
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Set the repository variable PRODUCTION_DEPLOY=true once hosting and secrets are configured.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.PRODUCTION_DEPLOY == 'true'
     runs-on: ubuntu-latest
     environment: production # set PRODUCTION_DIRECT_URL and DEPLOY_HOOK_URL as secrets of this environment
     concurrency: production
