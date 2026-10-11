@@ -17,6 +17,7 @@ import {
   FIELD_MAX_LENGTH as MAX,
   type ImportDelimiter,
 } from '../card-import.js';
+import { CardState } from '../../generated/prisma/enums.js';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -171,9 +172,40 @@ export class CardDto {
   updatedAt: Date;
 }
 
+export class CardProgressDto {
+  @ApiProperty({ enum: CardState, enumName: 'CardState' })
+  state: CardState;
+
+  @ApiProperty({
+    type: String,
+    format: 'date-time',
+    description: 'Next review',
+  })
+  due: Date;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  lastReview: Date | null;
+
+  @ApiProperty({ description: 'Times reviewed' })
+  reps: number;
+
+  @ApiProperty({ description: 'Times forgotten after being learned' })
+  lapses: number;
+}
+
+export class CardListItemDto extends CardDto {
+  @ApiProperty({
+    type: CardProgressDto,
+    nullable: true,
+    description:
+      "The caller's study progress on this card; null if never studied",
+  })
+  progress: CardProgressDto | null;
+}
+
 export class CardListDto {
-  @ApiProperty({ type: [CardDto] })
-  items: CardDto[];
+  @ApiProperty({ type: [CardListItemDto] })
+  items: CardListItemDto[];
 
   @ApiProperty()
   page: number;

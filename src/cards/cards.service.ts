@@ -61,8 +61,28 @@ export class CardsService {
       }),
       this.prisma.card.count({ where: { deckId } }),
     ]);
+
+    // Progress is per user: only the caller's rows, only for this page of cards.
+    const progress = await this.prisma.cardProgress.findMany({
+      where: { userId: user.id, cardId: { in: cards.map((card) => card.id) } },
+      select: {
+        cardId: true,
+        state: true,
+        due: true,
+        lastReview: true,
+        reps: true,
+        lapses: true,
+      },
+    });
+    const byCard = new Map(
+      progress.map(({ cardId, ...rest }) => [cardId, rest]),
+    );
+
     return {
-      items: cards.map(toCardDto),
+      items: cards.map((card) => ({
+        ...toCardDto(card),
+        progress: byCard.get(card.id) ?? null,
+      })),
       page: query.page,
       pageSize: query.pageSize,
       total,
