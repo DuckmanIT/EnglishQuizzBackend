@@ -444,6 +444,7 @@ feature branch ──push/PR──► CI verify: lint · typecheck · unit test 
                          deploy: prisma migrate deploy (DB production) ──► gọi deploy hook của hosting
 ```
 
+- Job deploy chỉ chạy khi repository variable `PRODUCTION_DEPLOY=true` (bật sau khi đã chọn hosting và thêm secret).
 - Chỉ nhánh `main` được deploy; bất kỳ bước nào fail thì dừng, production giữ nguyên bản cũ.
 - Bật branch protection cho `main` trên GitHub: bắt buộc PR + check `verify` pass, cấm push thẳng.
 - Trên nền tảng hosting: tắt auto-deploy khi push (deploy chỉ chạy qua hook từ CI).

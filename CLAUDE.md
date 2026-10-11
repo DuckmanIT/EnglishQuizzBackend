@@ -1,0 +1,35 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+Backend API for EnglishQuizz, a clone of [openquiz.ai](https://openquiz.ai/): a vocabulary-learning app with flashcards, spaced repetition (FSRS), dictation, prebuilt learning paths, and Premium AI features. **`docs/DESIGN.md` is the source of truth** for the data model, endpoints, feature phases and hosting. Read it before adding a feature, and update it when a decision changes.
+
+The frontend (Next.js) is a separate repo at `../EnglishQuizz` ([DuckmanIT/EnglishQuizz](https://github.com/DuckmanIT/EnglishQuizz)). It generates its API types from this server's OpenAPI spec at `/docs-json`, so DTOs and Swagger decorators are part of the contract.
+
+## Commands
+
+```bash
+npm run start:dev                          # http://localhost:4000 (frontend dev uses :3000)
+npm run build
+npm run lint && npm run typecheck
+npm test                                   # unit tests: src/**/*.spec.ts
+npx vitest run src/path/to/file.spec.ts    # single file
+npx vitest run -t "test name"              # single test
+npm run test:e2e                           # test/**/*.e2e-spec.ts, PrismaService mocked, no DB needed
+docker compose up -d                       # Postgres + Redis for local dev
+npm run db:migrate                         # prisma migrate dev
+```
+
+## Conventions
+
+- **ESM + NodeNext:** relative imports must end in `.js` (e.g. `./app.module.js`).
+- **Prisma 7:** the client is generated into `src/generated/prisma` (gitignored; `npm install` runs `prisma generate`). Import from `../generated/prisma/client.js`. Migrations use `DIRECT_URL` (`prisma.config.ts`); the app uses `DATABASE_URL` through the `@prisma/adapter-pg` driver adapter in `PrismaService`.
+- **Env:** every variable is declared and validated in `src/config/env.ts` (zod). Read config through `ConfigService<Env, true>` with `{ infer: true }`, not `process.env`.
+- **HTTP pipeline** lives in `src/setup-app.ts` (prefix `/api/v1`, CORS, cookies, helmet, ValidationPipe, Swagger, error filter) and is shared by `main.ts` and e2e tests.
+- **Errors:** all responses use `{ statusCode, code, message }`. For a domain error, throw `new HttpException({ code: 'DECK_NOT_FOUND', message }, 404)`; the frontend branches on `code`.
+- **Modules:** one folder per domain under `src/` (auth, decks, cards, study, …) as listed in DESIGN.md. Ownership checks live in services, not controllers.
+- **Phases:** build MVP features first (auth, decks/cards, catalog, SRS, study modes, stats). Do not build Phase 2/3 features unless asked.
+- **Environments:** localhost (`.env` + docker compose) and production (env vars on the hosting platform). Production deploys only from `main` via `.github/workflows/ci.yml`, after lint, typecheck, unit, e2e, build and docker build all pass. Never point local tooling at the production DB. Migrations run before the new code goes live, so keep them backward compatible.
+- **Hosting:** Singapore region, Neon + Upstash + S3, domain `duckman.io.vn` (API at `api.duckman.io.vn`). Do not use Cloudflare.
