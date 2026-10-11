@@ -31,6 +31,12 @@ jobs:
       - run: npm run build
       - name: Build production image
         run: docker build -t englishquizz-backend:${{ github.sha }} .
+      - name: Scan image for vulnerabilities
+        # Fails on HIGH/CRITICAL issues that already have a fix, so they can't reach production.
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.0
+          image --quiet --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          englishquizz-backend:${{ github.sha }}
 
   deploy:
     name: Deploy to production
