@@ -34,4 +34,4 @@ npm run db:migrate                         # prisma migrate dev + prisma generat
 - **Modules:** one folder per domain under `src/` (auth, decks, cards, study, …) as listed in DESIGN.md. Ownership checks live in services, not controllers.
 - **Phases:** build MVP features first (auth, decks/cards, catalog, SRS, study modes, stats). Do not build Phase 2/3 features unless asked.
 - **Environments:** localhost (`.env` + docker compose) and production (env vars on the hosting platform). Production deploys only from `main` via `.github/workflows/ci.yml`, after lint, typecheck, unit, e2e, build and docker build all pass. Never point local tooling at the production DB. Migrations run before the new code goes live, so keep them backward compatible.
-- **Hosting:** Singapore region, Neon + Upstash + S3, domain `duckman.io.vn` (API at `api.duckman.io.vn`). Do not use Cloudflare.
+- **Hosting:** Singapore region. API on Render (Docker service `englishquizzbackend`, deployed only by the CI deploy hook), Postgres on Neon (`neondb`), S3/Upstash planned for phase 2. Domain `duckman.io.vn`, API at `https://api.duckman.io.vn` (CNAME at Nhân Hòa). Do not use Cloudflare.
