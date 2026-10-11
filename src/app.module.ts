@@ -7,6 +7,7 @@ import { DecksModule } from './decks/decks.module.js';
 import { validateEnv, type Env } from './config/env.js';
 import { HealthController } from './health/health.controller.js';
 import { PrismaModule } from './prisma/prisma.module.js';
+import { StudyModule } from './study/study.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -34,6 +35,7 @@ import { UsersModule } from './users/users.module.js';
     UsersModule,
     DecksModule,
     CardsModule,
+    StudyModule,
   ],
   controllers: [HealthController],
 })
