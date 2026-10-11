@@ -2,9 +2,9 @@
 // Connection URLs live in prisma.config.ts (migrations) and PrismaService (runtime).
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "esm"
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
   // Explicit, so the output doesn't depend on whether tsconfig.json exists at generate time (e.g. in Docker).
   generatedFileExtension = "ts"
   importFileExtension    = "js"
@@ -191,15 +191,17 @@ model Card {
 
 // Per-user FSRS state for one card.
 model CardProgress {
-  userId     String    @db.Uuid
-  cardId     String    @db.Uuid
-  state      CardState @default(NEW)
-  due        DateTime  @default(now())
-  stability  Float     @default(0)
-  difficulty Float     @default(0)
-  reps       Int       @default(0)
-  lapses     Int       @default(0)
-  lastReview DateTime?
+  userId        String    @db.Uuid
+  cardId        String    @db.Uuid
+  state         CardState @default(NEW)
+  due           DateTime  @default(now())
+  stability     Float     @default(0)
+  difficulty    Float     @default(0)
+  scheduledDays Int       @default(0)
+  learningSteps Int       @default(0) // index into the FSRS (re)learning steps
+  reps          Int       @default(0)
+  lapses        Int       @default(0)
+  lastReview    DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
@@ -213,6 +215,7 @@ model ReviewLog {
   userId     String    @db.Uuid
   cardId     String    @db.Uuid
   mode       StudyMode
+  prevState  CardState @default(NEW) // state before this answer; NEW = first time studied
   rating     Rating
   correct    Boolean
   answer     String? // what the user typed (dictation / type-answer)

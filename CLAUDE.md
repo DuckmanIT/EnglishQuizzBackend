@@ -19,7 +19,7 @@ npx vitest run src/path/to/file.spec.ts    # single file
 npx vitest run -t "test name"              # single test
 npm run test:e2e                           # test/**/*.e2e-spec.ts, real Postgres DB englishquizz_test (needs docker compose up)
 docker compose up -d                       # Postgres + Redis for local dev
-npm run db:migrate                         # prisma migrate dev
+npm run db:migrate                         # prisma migrate dev + prisma generate (Prisma 7 no longer generates on migrate)
 ```
 
 ## Conventions

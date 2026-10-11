@@ -289,6 +289,19 @@ model UsageCounter {           // đếm quota AI theo ngày/tháng
   - Dictation / Type answer: so khớp sau khi chuẩn hoá (lowercase, bỏ dấu câu, trim). Khoảng cách Levenshtein = 0 → GOOD, ≤ 1–2 ký tự (lỗi chính tả nhỏ) → HARD, còn lại → AGAIN.
 - Mỗi câu trả lời: cập nhật `CardProgress` và ghi `ReviewLog` trong cùng một transaction.
 
+**Chi tiết đã hiện thực** (`src/study/`):
+- FSRS v6 mặc định của `ts-fsrs`, tỉ lệ nhớ mục tiêu 90%, bật fuzz (xê dịch ngẫu nhiên khoảng ôn để thẻ không dồn cùng ngày). `CardProgress` lưu thêm `scheduledDays`, `learningSteps`; `ReviewLog.prevState` ghi trạng thái trước khi trả lời. Lớp `Scheduler` bọc thư viện, phần còn lại không phụ thuộc kiểu của `ts-fsrs`.
+- **Thẻ mới hôm nay** = số `ReviewLog` có `prevState = NEW` từ 0h theo `timezone` của user. Giới hạn reset lúc nửa đêm giờ địa phương.
+- **Phạm vi hàng đợi:** có `deckId` → deck đó (đọc được, kể cả deck hệ thống, học trực tiếp không cần clone). Không có `deckId` → thẻ đến hạn ở mọi deck đọc được; thẻ mới từ deck của mình và deck đã bắt đầu học.
+- **Ngưỡng trả lời nhanh:** < 3 giây (trắc nghiệm/ghép cặp) → EASY. **Lỗi chính tả cho phép:** 0 ký tự với từ ≤ 4 chữ, 1 với ≤ 8, 2 với dài hơn. Chuẩn hoá Unicode NFC, giữ dấu tiếng Việt ("ban" ≠ "bán").
+- **Câu hỏi theo chế độ** (`POST /study/sessions`, không trả đáp án trừ FLIP):
+  - `FLIP`: hiện term, kèm cả thẻ để lật, và `previews` = ngày ôn tiếp theo cho từng nút Again/Hard/Good/Easy.
+  - `MULTIPLE_CHOICE`: hiện term, 4 phương án nghĩa (3 nghĩa sai lấy ngẫu nhiên trong cùng deck; deck nhỏ thì ít phương án hơn). Gửi lại đúng chuỗi đã chọn.
+  - `MATCH`: hiện các term, `matchChoices` = mọi nghĩa trong phiên, xáo trộn.
+  - `TYPE_ANSWER`: hiện nghĩa, gõ term; có `answerLength`.
+  - `DICTATION`: nghe rồi gõ term. Không có `audioUrl` thì trả `speakText` để frontend đọc bằng speech synthesis của trình duyệt (không hiển thị).
+- `POST /study/answers` trả `{ correct, rating, expected, distance?, state, due, scheduledDays }`; lỗi `STUDY_RATING_REQUIRED` (FLIP thiếu rating), `STUDY_ANSWER_REQUIRED`, `CARD_NOT_FOUND`.
+
 ---
 
 ## 5. API (REST, prefix `/api/v1`)
