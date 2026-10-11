@@ -349,6 +349,7 @@ Access token JWT sống 15 phút; refresh token sống 30 ngày, lưu dạng has
 - **Giới hạn:** 5.000 thẻ/deck (422 `DECK_CARD_LIMIT`), 500 thẻ/lần thêm, 2.000 dòng/lần import (422 `IMPORT_TOO_LARGE`), nội dung import ≤ 1 triệu ký tự (body JSON tối đa 4MB).
 - **Thêm thẻ** luôn nối vào cuối deck; `Deck.cardCount` cập nhật trong cùng transaction, khoá dòng deck để các request đồng thời không trùng `position` hay vượt giới hạn.
 - **Import** nhận JSON `{ content, delimiter?, hasHeader?, dryRun? }` (frontend đọc file rồi gửi text). Hỗ trợ TSV (Quizlet/Excel), CSV có dấu ngoặc kép, dấu `;`, và dòng `term - definition`; tự nhận dạng nếu `delimiter = auto`. Không có header thì cột theo thứ tự `term, definition, phonetic, partOfSpeech, example, exampleTrans`; có header thì nhận cả tên tiếng Anh lẫn tiếng Việt (`từ`, `nghĩa`, `phiên âm`, …). Dòng lỗi được bỏ qua và trả về kèm số dòng; `dryRun = true` chỉ trả bản xem trước. CSV hỏng (ngoặc kép không đóng) → 400 `IMPORT_PARSE_ERROR`.
+- **Danh sách thẻ** (`GET /decks/:id/cards`) kèm `progress` của **chính người gọi** cho từng thẻ (`state`, `due`, `lastReview`, `reps`, `lapses`), `null` nếu chưa học. Các endpoint thêm/sửa thẻ vẫn trả `CardDto` không có `progress`.
 - **Sửa thẻ:** gửi chuỗi rỗng cho trường tuỳ chọn (`phonetic`, `example`, …) để xoá trường đó.
 
 ### Catalog / Lộ trình

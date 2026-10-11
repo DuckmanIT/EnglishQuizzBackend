@@ -357,6 +357,58 @@ describe('Decks & cards (e2e)', () => {
       ).toBe(2);
     });
 
+    it("includes the caller's own study progress for each card", async () => {
+      const deck = await createDeck(bob.auth, { visibility: 'PUBLIC' });
+      const [cat, dog] = await addCards(bob.auth, deck.id, [
+        'cat',
+        'dog',
+        'bird',
+      ]);
+      const due = new Date('2026-12-01T00:00:00Z');
+      await t.prisma.cardProgress.createMany({
+        data: [
+          {
+            userId: alice.userId,
+            cardId: cat.id,
+            state: 'REVIEW',
+            due,
+            reps: 4,
+            lapses: 1,
+          },
+          { userId: bob.userId, cardId: dog.id, state: 'LEARNING', due },
+        ],
+      });
+
+      const asAlice = await http()
+        .get(`/api/v1/decks/${deck.id}/cards`)
+        .set('Authorization', alice.auth)
+        .expect(200);
+      expect(
+        asAlice.body.items.map((c: { progress: unknown }) => c.progress),
+      ).toEqual([
+        {
+          state: 'REVIEW',
+          due: due.toISOString(),
+          lastReview: null,
+          reps: 4,
+          lapses: 1,
+        },
+        null, // Bob studied this one, not Alice
+        null,
+      ]);
+
+      const asBob = await http()
+        .get(`/api/v1/decks/${deck.id}/cards`)
+        .set('Authorization', bob.auth)
+        .expect(200);
+      expect(
+        asBob.body.items.map(
+          (c: { progress: { state: string } | null }) =>
+            c.progress?.state ?? null,
+        ),
+      ).toEqual([null, 'LEARNING', null]);
+    });
+
     it('keeps positions unique under concurrent appends', async () => {
       const deck = await createDeck(alice.auth);
       await Promise.all(
